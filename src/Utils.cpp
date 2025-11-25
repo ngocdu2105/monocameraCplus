@@ -1,7 +1,6 @@
 #include "include/Utils.h"
 #include "include/NeighborPointSet.h"
 #include "include/PointSet.h"
-#include "include/PointSetArray.h"
 #include <cassert>
 #include <numeric>
 #include <algorithm>
@@ -349,6 +348,7 @@ void computeTopCenterDisplacement(const cv::Mat& topMask,
     topCenter = cv::Point(centerX, centerY);
 
     cv::imshow("TopMask", topMask);
+    cv::imshow("TopBelow",bottomMask );
     cv::waitKey(1);
 
     // Gaussian + Canny
@@ -386,10 +386,10 @@ void computeTopCenterDisplacement(const cv::Mat& topMask,
     cv::Point displacedVectorIndex = Utils::findMinMaxDisP1P2(displacementVectors);
     size_t SampleRecheckNumber = 20;
 
-    cv::Point movedSecondPoint = neighbor.secondaryA[displacedVectorIndex.y]; 
+    cv::Point movedSecondPoint = neighbor.secondaryA[displacedVectorIndex.x]; 
     //get more sample moved point to recheck
 
-    geom::PointSet samplePrimaryA = neighbor.primaryA(displacedVectorIndex.x - SampleRecheckNumber,displacedVectorIndex.x + SampleRecheckNumber );
+    geom::PointSet samplePrimaryA = neighbor.primaryA(displacedVectorIndex.y - SampleRecheckNumber,displacedVectorIndex.y + SampleRecheckNumber );
 
     // move point Primary
     geom::PointSet movedVecters = samplePrimaryA - movedSecondPoint;
