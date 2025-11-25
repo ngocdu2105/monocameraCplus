@@ -1,66 +1,91 @@
-#include<string.h>
-
-#include <iostream>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/dnn.hpp>
-#include<opencv2/opencv.hpp>
 #include "include/Calibration.h"
-#include "include/ProcessVector.h"
-#include"include/LoadIMG.h"
+#include <opencv2/imgproc.hpp>
+#include <numeric>
+#include <iostream>
+#include "include/LoadIMG.h"
+#include "include/Utils.h"
 
-Calibration::Calibration(const std::string& pathNoObject): pathNoObject(pathNoObject)
+Calibration::Calibration(const std::string& calibrationImagePath) 
+    : calibrationImagePath_(calibrationImagePath)
 {
-    Timer t;
-    cv::Mat gray_image = cv::imread(pathNoObject,0);
-    bool found = cv::findChessboardCorners(gray_image, board_sz, corners, cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FILTER_QUADS);
+    Timer timer;
 
-    if(found)
+    cv::Mat grayImage = cv::imread(calibrationImagePath_, cv::IMREAD_GRAYSCALE);
+    bool cornersFound = cv::findChessboardCorners(
+        grayImage, 
+        chessboardSize_, 
+        chessboardCorners_, 
+        cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FILTER_QUADS
+    );
+
+    if (cornersFound)
     {
-        cv::cornerSubPix(gray_image, corners, cv::Size(13, 9), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 30, 0.1));
-        cv::drawChessboardCorners(gray_image, board_sz, corners, found);
+        cv::cornerSubPix(
+            grayImage, 
+            chessboardCorners_, 
+            cv::Size(13, 9), 
+            cv::Size(-1, -1), 
+            cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 30, 0.1)
+        );
+        cv::drawChessboardCorners(grayImage, chessboardSize_, chessboardCorners_, cornersFound);
     }
-    double dis = distancePointToLinePoint(corners[13],corners[0],corners[1]);
-    std::vector<float> diss;
-    for(int i=1;i< corners.size();i++)
+
+    // Compute average distance between adjacent corners
+    double referenceDistance = Utils::pointLineDistance(
+        chessboardCorners_[13], chessboardCorners_[0], chessboardCorners_[1]
+    );
+
+    std::vector<float> validDistances;
+    for (size_t i = 1; i < chessboardCorners_.size(); ++i)
     {
-        double dis_ = cv::norm(corners[i-1]-corners[i]);
-        if(dis_ < dis+10) {diss.push_back(static_cast<float>(dis_));}
+        double distance = cv::norm(chessboardCorners_[i] - chessboardCorners_[i-1]);
+        if (distance < referenceDistance + 10)
+            validDistances.push_back(static_cast<float>(distance));
     }
-    disTB = std::accumulate(diss.begin(),diss.end(),0.0) / diss.size();
-    
-    Orin = corners[0];
-    Orin_x = corners[1];
-    Orin_y = corners[13];
+    avgDistanceBetweenCorners_ = std::accumulate(validDistances.begin(), validDistances.end(), 0.0) 
+                                / validDistances.size();
 
-    std::cerr<<"Load success Calibration ";
-    t.stop();  
+    // Reference points for calibration axes
+    origin_ = chessboardCorners_[0];
+    originX_ = chessboardCorners_[1];
+    originY_ = chessboardCorners_[13];
 
+    std::cerr << "Calibration image loaded successfully.\n";
+    timer.stop();
 }
 
-const double& Calibration::getDisTB() const{
-    return disTB;
-}
-void Calibration::calPoint(const cv::Point2f& p,cv::Mat& img)
+const double& Calibration::getAverageCornerDistance() const
 {
-    // auto pt = corners[20];
-
-    auto pt = p;
-    dis_Ox = distancePointToLinePoint(pt,Orin,Orin_x)/disTB;
-    dis_Oy = distancePointToLinePoint(pt,Orin,Orin_y)/disTB;
-    cv::circle(img, pt, 2, cv::Scalar(0,0,255), 2);
-    cv::circle(img, Orin, 2, cv::Scalar(0,0,255), 2);
-    cv::circle(img, Orin_x, 2, cv::Scalar(0,0,255), 2);
-    cv::circle(img, Orin_y, 2, cv::Scalar(0,0,255), 2);    
-    results(img);
-    std::cerr<<"Successful conversion of 2D calibration chessboard prediction points: P("<<dis_Ox<<", "<<dis_Oy<<") .\n";
-
+    return avgDistanceBetweenCorners_;
 }
-void Calibration::results(cv::Mat& img)
+
+void Calibration::convertPointToChessboardUnits(const cv::Point2f& point, cv::Mat& image) const
 {
-    cv::putText(img,\
-    "P("+ std::to_string(dis_Ox)+", "+std::to_string(dis_Oy)+")",\
-    cv::Point(50,50),\
-    cv::FONT_HERSHEY_SIMPLEX,1,cv::Scalar(0, 0, 255),2);
+    normalizedX_ = Utils::pointLineDistance(point, origin_, originX_) / avgDistanceBetweenCorners_;
+    normalizedY_ = Utils::pointLineDistance(point, origin_, originY_) / avgDistanceBetweenCorners_;
+
+    // Draw points on image for visualization
+    cv::circle(image, point, 2, cv::Scalar(0, 0, 255), 2);
+    cv::circle(image, origin_, 2, cv::Scalar(0, 0, 255), 2);
+    cv::circle(image, originX_, 2, cv::Scalar(0, 0, 255), 2);
+    cv::circle(image, originY_, 2, cv::Scalar(0, 0, 255), 2);
+
+    displayCalibrationResult(image);
+
+    std::cerr << "2D calibration point converted: P(" 
+              << normalizedX_ << ", " << normalizedY_ << ").\n";
 }
 
+void Calibration::displayCalibrationResult(cv::Mat& image) const
+{
+    std::string text = "P(" + std::to_string(normalizedX_) + ", " + std::to_string(normalizedY_) + ")";
+    cv::putText(
+        image, 
+        text, 
+        cv::Point(50, 50), 
+        cv::FONT_HERSHEY_SIMPLEX, 
+        1.0, 
+        cv::Scalar(0, 0, 255), 
+        2
+    );
+}
