@@ -47,8 +47,8 @@ Calibration::Calibration(const std::string& calibrationImagePath)
 
     // Reference points for calibration axes
     origin_ = chessboardCorners_[0];
-    originX_ = chessboardCorners_[1];
-    originY_ = chessboardCorners_[13];
+    originX_ = chessboardCorners_[13];
+    originY_ = chessboardCorners_[11];
 
     std::cerr << "Calibration image loaded successfully.\n";
     timer.stop();
