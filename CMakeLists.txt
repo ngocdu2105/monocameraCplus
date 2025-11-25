@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
-project(test )
+project(monocamera )
 find_package(OpenCV REQUIRED PATHS /home/trinhngocdu123/build )
+set(ONNXRUNTIME_INCLUDE_DIR "/home/trinhngocdu/.local/include/onnxruntime/include")
+set(ONNXRUNTIME_LIB "/home/trinhngocdu/.local/lib/libonnxruntime.so")
 
+include_directories(${ONNXRUNTIME_INCLUDE_DIR})
 include_directories( ${OpenCV_INCLUDE_DIRS})
 find_package(onnxruntime REQUIRED)
 
@@ -35,8 +38,8 @@ file(GLOB SOURCE "src/*.cpp")
 
 message(":  " ${SOURCE})
 
-add_executable(test ${SOURCE} )
+add_executable(monocamera ${SOURCE} )
 
 
 
-target_link_libraries(test  PUBLIC  ${OpenCV_LIBS} ${onnxruntime_LIBRARY} )
+target_link_libraries(monocamera  PUBLIC  ${OpenCV_LIBS} ${onnxruntime_LIBRARY} )
