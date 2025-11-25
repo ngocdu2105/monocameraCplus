@@ -11,6 +11,7 @@
 #include<include/RCNN2.h>
 #include "onnxruntime_cxx_api.h"
 #include <include/LoadIMG.h>
+#include "include/Utils.h"
 
 RCNN2::RCNN2(const std::string& pathModel)
 {
@@ -48,7 +49,7 @@ std::vector<float> RCNN2::PreprocessImg(const cv::Mat& img) const
     // return matToVector(resizedImage);
     // return matToVectorCols(channel);
 
-    return matToVector(preprocessedImage);
+    return Utils::matToFloatVector(preprocessedImage);
     // return matToVector(preprocessing);
 
 }
@@ -63,12 +64,12 @@ void RCNN2::run(const cv::Mat& img) const
     std::vector<int64_t> input_imshapeDataShape = { 1, 2};
     std::vector<float> input_image = PreprocessImg(img);
     std::vector<int64_t> input_imageshape = {1, 3, 224, 224};
-    std::vector<float> input_scale_factor = generate_scale(img);
+    std::vector<float> input_scale_factor = Utils::computeResizeScale(img);
     std::vector<float> input_imshapeData{std::ceil(input_f.height*input_scale_factor[0]),std::ceil(input_f.width*input_scale_factor[1])};
     std::vector<int64_t> input_scale_factorShape = { 1, 2};
 
-    print_Vector(input_imshapeData);
-    print_Vector(input_scale_factor);
+    Utils::printVector(input_imshapeData);
+    Utils::printVector(input_scale_factor);
 
     // Create tensors
     try {
@@ -99,7 +100,7 @@ void RCNN2::run(const cv::Mat& img) const
                                     ort_inputs.data(), ort_inputs.size(),
                                     name_output.data(), name_output.size());
 
-    GetOutputOnnx(ort_outputs, MatTop,MatBelow,input_f.height,input_f.width,0.95);
+    Utils::extractOnnxOutputMasks(ort_outputs, MatTop,MatBelow,input_f.height,input_f.width,0.95);
     std::cerr<<"RCNN2 model predicts crop image ";
 
     } catch (const std::exception& e) {
