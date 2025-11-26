@@ -1,6 +1,5 @@
 #pragma once
 #include "include/PointSet.h"
-#include "include/PointSetArray.h"
 
 namespace geom {
 

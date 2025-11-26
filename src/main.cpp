@@ -1,13 +1,11 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include "include/Yolov5.h"
-// #include "include/RCNN.h"
+#include "include/RCNN2.h"
 #include "include/Calibration.h"
 #include "include/LoadIMG.h"
 #include "include/PointSet.h"
-#include "include/PointSetArray.h"
 #include "include/Utils.h"
-#include "include/RCNN2.h"
 // ============================
 // Function to process one image
 // ============================
@@ -20,7 +18,7 @@ void ProcessImage(const cv::Mat& img,
     cv::Rect detectedBox;
     cv::Mat cropObject = yolo.getFrame(img, detectedBox);
     cv::Size cropSize = cropObject.size();
-
+    std::cout << "size cropSize: " << cropSize.width << " x " << cropSize.height << std::endl; 
     // 2. Predict masks with RCNN
     rcnn.run(cropObject);
     cv::Mat maskTop   = rcnn.getMaskTop();
@@ -28,7 +26,7 @@ void ProcessImage(const cv::Mat& img,
 
 
     // 3. Compute displacement with PointSet
-    geom::PointSet displacementArray;
+    geom::PointSet displacementPoints;
     cv::Point topCenter, topCenterMoved;
 
     geom::computeTopCenterDisplacement(
@@ -38,7 +36,7 @@ void ProcessImage(const cv::Mat& img,
         cropSize.height,
         topCenter,
         topCenterMoved,
-        displacementArray
+        displacementPoints
     );
 
     // // 4. Convert point to original image coordinates
@@ -46,11 +44,18 @@ void ProcessImage(const cv::Mat& img,
 
     // // 5. Visualization / calibration
     cv::Mat imgClone = img.clone();
-    cv::circle(cropObject, topCenter, 3, cv::Scalar(0, 0, 255), -1);
-    cv::imshow("imgClone", cropObject);
-    cv::waitKey(0);
-
     calibration.convertPointToChessboardUnits(pointInOriginal, imgClone);
+    cv::circle(cropObject, topCenter, 3, cv::Scalar(0, 0, 255), -1);    
+    cv::circle(imgClone, pointInOriginal, 3, cv::Scalar(0, 0, 255), -1);
+
+    cv::Point p1 = displacementPoints[0];
+    cv::Point p2 = displacementPoints[1];
+    cv::circle(cropObject, p1, 3, cv::Scalar(0, 255, 255), -1);
+    cv::circle(cropObject, p2, 3, cv::Scalar(0, 255, 255), -1);
+    cv::imshow("img", imgClone);
+    cv::imshow("imgClone", maskBelow);
+    cv::imshow("cropObject", cropObject);
+    cv::waitKey(0);
 
     std::cout << "Pixel coordinates of point P in original image: " << pointInOriginal << std::endl;
     // cv::imshow("maskTop", maskTop );

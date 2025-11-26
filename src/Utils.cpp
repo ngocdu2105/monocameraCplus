@@ -242,16 +242,23 @@ std::vector<int> generateRandomVector(int count, int minVal, int maxVal) {
 }
 
 // ---------------- Resize ----------------
+// std::vector<float> computeResizeScale(const cv::Mat& img, const std::vector<int>& targetSize) {
+//     assert(!img.empty());
+//     int h = img.rows, w = img.cols;
+//     float scaleX = static_cast<float>(targetSize[1]) / w;
+//     float scaleY = static_cast<float>(targetSize[0]) / h;
+//     float scale = std::min(scaleX, scaleY);
+//     return {scale * h / h, scale * w / w}; // return scale factors
+// }
+
 std::vector<float> computeResizeScale(const cv::Mat& img, const std::vector<int>& targetSize) {
     assert(!img.empty());
     int h = img.rows, w = img.cols;
     float scaleX = static_cast<float>(targetSize[1]) / w;
     float scaleY = static_cast<float>(targetSize[0]) / h;
-    float scale = std::min(scaleX, scaleY);
-    return {scale * h / h, scale * w / w}; // return scale factors
+    float scale = std::min(scaleX, scaleY); // uniform scale to keep aspect ratio
+    return {scaleY, scaleX}; // scaleY, scaleX
 }
-
-
 
 //onnx 
 

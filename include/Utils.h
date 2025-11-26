@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <onnxruntime_cxx_api.h>
 #include "include/PointSet.h"
-#include "include/PointSetArray.h"
+// #include "include/PointSetArray.h"
 #include "include/NeighborPointSet.h"
 namespace Utils {
 
